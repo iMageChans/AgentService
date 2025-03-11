@@ -45,7 +45,7 @@ INSTALLED_APPS = [
     'django_filters',
     'engines.apps.EnginesConfig',
     'assistant.apps.AssistantConfig',
-    'agent.apps.AgentConfig'
+    'agent.apps.AgentConfig',
     'corsheaders',
 ]
 

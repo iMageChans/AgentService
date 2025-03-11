@@ -23,12 +23,16 @@ class AgentViewSet(CreateModelMixin,
         assistant_name = validated_data.get("assistant_name")
         model_name = validated_data.get("model_name")
         users_input = validated_data.get("users_input")
+        language = validated_data.get("language")
 
         manager = initialize()
         manager.assistants[assistant_name].set_model(manager.models[model_name])
         
         # 获取响应内容
-        response_content = manager.invoke(user_id=user_id, assistant_name=assistant_name, user_input=users_input)
+        response_content = manager.invoke(user_id=user_id,
+                                          assistant_name=assistant_name,
+                                          user_input=users_input,
+                                          language=language)
 
         # 处理响应内容
         if response_content:  # 确保响应内容不为空
