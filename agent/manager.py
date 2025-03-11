@@ -26,13 +26,9 @@ class Assistant:
             f"{self.assistant.prompt_template}\n"
             f"请使用 {self.language} 语言进行回复。"  # 动态添加语言要求
         )
-        if self.store_in_memory:
-            human_template = "{history}\n\n用户: {input}"
-        else:
-            human_template = "用户: {input}"  # 无记忆时移除 {history}
         return ChatPromptTemplate.from_messages([
             SystemMessagePromptTemplate.from_template(system_template),
-            HumanMessagePromptTemplate.from_template(human_template)
+            HumanMessagePromptTemplate.from_template("{history}\n\n用户: {input}")
         ])
 
     def set_model(self, model):
@@ -55,20 +51,20 @@ class Assistant:
         """调用助手并生成响应，动态绑定memory"""
         if self.chain is None or self.chain.memory != memory:
             self.chain = ConversationChain(llm=self.model, memory=memory, prompt=self.prompt)
-            
-        # 如果不存入记忆，临时移除memory
+
+            # 如果不存入记忆，临时移除memory
         original_memory = None
         if not self.store_in_memory:
             original_memory = self.chain.memory  # 备份原始memory对象
             self.chain.memory = None  # 移除memory，阻止自动更新
-        
+
         # 执行对话
         response = self.chain.run(input=user_input)
-        
+
         # 恢复memory（如果之前移除）
         if not self.store_in_memory and original_memory is not None:
             self.chain.memory = original_memory
-        
+
         return response
 
 
