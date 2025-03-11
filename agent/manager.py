@@ -26,9 +26,13 @@ class Assistant:
             f"{self.assistant.prompt_template}\n"
             f"请使用 {self.language} 语言进行回复。"  # 动态添加语言要求
         )
+        if self.store_in_memory:
+            human_template = "{history}\n\n用户: {input}"
+        else:
+            human_template = "用户: {input}"  # 无记忆时移除 {history}
         return ChatPromptTemplate.from_messages([
             SystemMessagePromptTemplate.from_template(system_template),
-            HumanMessagePromptTemplate.from_template("{history}\n\n用户: {input}")
+            HumanMessagePromptTemplate.from_template(human_template)
         ])
 
     def set_model(self, model):
