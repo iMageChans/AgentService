@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  agent:  # 使用应用名称作为服务名
+    build: .
+    restart: always
+    volumes:
+      - ./:/app
+      - ./db.sqlite3:/app/db.sqlite3  # 直接映射本地数据库文件
+      - ./staticfiles:/app/staticfiles  # 项目静态文件
+      - ./media:/app/media  # 媒体文件
+      # 映射到宿主机的特定目录，方便nginx配置
+      - /var/www/agent/static:/app/staticfiles
+      - /var/www/agent/static:/app/media
+    ports:
+      - "8004:8004"
+    environment:
+      - DEBUG=False
+      - ALLOWED_HOSTS=localhost,127.0.0.1
+      - STATIC_URL=/agent/static/  # 注意这里使用了应用特定的路径
+      - MEDIA_URL=/agent/static/
+      - TIME_ZONE=Asia/Shanghai
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8004"]
