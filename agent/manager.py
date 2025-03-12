@@ -13,17 +13,15 @@ class Assistant:
         self.model = model
         self.assistant = AssistantModel.objects.get(pk=assistant_id)  # 从数据库加载Assistant配置
         self.language = language
-        self.prompt = ChatPromptTemplate.from_messages([
-            SystemMessagePromptTemplate.from_template(self.assistant.prompt_template),
-            HumanMessagePromptTemplate.from_template("{history}\n\n用户: {input}")
-        ])
+        self.prompt_template = self.assistant.prompt_template  # 存储原始提示词模板
+        self.prompt = self._build_prompt_template()  # 构建提示词
         self.store_in_memory = self.assistant.is_memory  # 从数据库模型中读取是否存入记忆
         self.chain = None
 
     def _build_prompt_template(self):
         """构建提示词模板，动态加入语言要求"""
         system_template = (
-            f"{self.assistant.prompt_template}\n"
+            f"{self.prompt_template}\n"
             f"请使用 {self.language} 语言进行回复。"  # 动态添加语言要求
         )
         return ChatPromptTemplate.from_messages([
@@ -42,17 +40,27 @@ class Assistant:
         self.prompt = self._build_prompt_template()  # 更新提示词模板
         self.chain = None  # 重置chain
 
-    def set_prompt_template(self):
-        """切换提示词模板（运行时动态调整）"""
+    def set_prompt_template(self, prompt_template=None):
+        """
+        切换提示词模板（运行时动态调整）
+        如果不提供新的模板，则使用助手默认的模板
+        """
+        if prompt_template is not None:
+            self.prompt_template = prompt_template
+        else:
+            # 重新从数据库加载最新的提示词模板
+            self.assistant = AssistantModel.objects.get(pk=self.assistant.id)
+            self.prompt_template = self.assistant.prompt_template
+            
         self.prompt = self._build_prompt_template()
-        self.chain = None
+        self.chain = None  # 重置chain，下次invoke时重新初始化
 
     def invoke(self, user_input: str, memory: ConversationBufferMemory) -> str:
         """调用助手并生成响应，动态绑定memory"""
         if self.chain is None or self.chain.memory != memory:
             self.chain = ConversationChain(llm=self.model, memory=memory, prompt=self.prompt)
 
-            # 如果不存入记忆，临时移除memory
+        # 如果不存入记忆，临时移除memory
         original_memory = None
         if not self.store_in_memory:
             original_memory = self.chain.memory  # 备份原始memory对象
@@ -101,23 +109,45 @@ class AssistantManager:
             self.memory_dict[user_id] = ConversationBufferMemory(return_messages=True)
         return self.memory_dict[user_id]
 
-    def invoke(self, assistant_name: str, user_id: str, user_input: str, language: str = None) -> str:
-        """调用指定Assistant并生成响应，基于用户ID管理记忆"""
+    def invoke(self, assistant_name: str, user_id: str, user_input: str, language: str = None, prompt_template: str = None) -> str:
+        """
+        调用指定Assistant并生成响应，基于用户ID管理记忆
+        可选参数:
+        - language: 指定输出语言
+        - prompt_template: 自定义提示词模板
+        """
         if assistant_name not in self.assistants:
             raise ValueError(f"Assistant {assistant_name} not found.")
+            
         assistant = self.assistants[assistant_name]
+        
+        # 如果提供了自定义提示词模板，则更新
+        if prompt_template:
+            assistant.set_prompt_template(prompt_template)
+            
+        # 如果提供了语言设置，则更新
         if language and language != assistant.language:
             assistant.set_language(language)
+            
         memory = self.get_or_create_memory(user_id)
-        response = self.assistants[assistant_name].invoke(user_input, memory)
-        if self.assistants[assistant_name].store_in_memory and len(memory.chat_memory.messages) > self.max_turns * 2:
+        response = assistant.invoke(user_input, memory)
+        
+        # 管理对话历史长度
+        if assistant.store_in_memory and len(memory.chat_memory.messages) > self.max_turns * 2:
             memory.chat_memory.messages = memory.chat_memory.messages[-self.max_turns * 2:]
+            
         return response
 
     def clear_memory(self, user_id: str):
         """清除指定用户的记忆"""
         if user_id in self.memory_dict:
             self.memory_dict[user_id].clear()
+            
+    def update_assistant_prompt(self, assistant_name: str, prompt_template: str):
+        """更新指定助手的提示词模板"""
+        if assistant_name not in self.assistants:
+            raise ValueError(f"Assistant {assistant_name} not found.")
+        self.assistants[assistant_name].set_prompt_template(prompt_template)
 
 
 def initialize() -> AssistantManager:
@@ -127,10 +157,9 @@ def initialize() -> AssistantManager:
     for engine in engines:
         manager.add_model(engine)
 
-    assistant_models =  AssistantModel.objects.all()
+    assistant_models = AssistantModel.objects.all()
 
     for assistant in assistant_models:
         manager.add_assistant(assistant)
-        manager.assistants[assistant.name].set_prompt_template()
 
     return manager
