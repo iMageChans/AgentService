@@ -6,6 +6,7 @@ class AgentInputSerializer(serializers.Serializer):
     model_name = serializers.CharField(required=True, help_text="模型名称")
     users_input = serializers.CharField(required=True, help_text="用户输入内容")
     language = serializers.CharField(required=True, help_text="语言")
+    user_template_id = serializers.CharField(required=False, help_text="模板id")
     
     def validate_assistant_name(self, value):
         from assistant.models import Assistant

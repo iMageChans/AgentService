@@ -53,6 +53,7 @@ class AgentViewSet(CreateModelMixin,
         model_name = validated_data.get("model_name")
         users_input = validated_data.get("users_input")
         language = validated_data.get("language")
+        user_template_id = validated_data.get("user_template_id", None)
 
         manager = initialize()
         manager.assistants[assistant_name].set_model(manager.models[model_name])
@@ -60,8 +61,12 @@ class AgentViewSet(CreateModelMixin,
         custom_prompt = None
         try:
             from assistant.models import UsersAssistantTemplates
-            user_template = UsersAssistantTemplates.objects.get(user_id=user_id, is_default=True)
-            custom_prompt = user_template.prompt_template
+            if user_template_id:
+                user_template = UsersAssistantTemplates.objects.get(user_id=user_id, id=user_template_id)
+                custom_prompt = user_template.prompt_template
+            else:
+                user_template = UsersAssistantTemplates.objects.get(user_id=user_id, is_default=True)
+                custom_prompt = user_template.prompt_template
         except:
             pass  # 如果出错，使用默认模板
         
