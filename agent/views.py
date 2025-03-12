@@ -1,6 +1,6 @@
 import json
 
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from rest_framework import status
 
@@ -11,6 +11,7 @@ from utils.mixins import *
 from rest_framework.viewsets import GenericViewSet
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from asgiref.sync import sync_to_async
 
 
 class AgentViewSet(CreateModelMixin,
@@ -165,3 +166,44 @@ class AgentViewSet(CreateModelMixin,
                     "content": {}
                 }
             })
+
+# 异步视图示例
+@api_view(['POST'])
+async def async_agent_view(request):
+    """
+    异步处理代理请求
+    """
+    # 获取请求数据
+    data = request.data
+    
+    # 异步处理逻辑
+    result = await process_agent_request(data)
+    
+    # 返回响应
+    return Response(result, status=status.HTTP_200_OK)
+
+# 异步处理函数
+async def process_agent_request(data):
+    """
+    异步处理代理请求的具体逻辑
+    """
+    # 这里是您的异步处理逻辑
+    # 例如，调用异步 LLM API
+    
+    # 如果需要访问数据库，使用 sync_to_async
+    # 例如：
+    # get_assistant = sync_to_async(Assistant.objects.get)
+    # assistant = await get_assistant(name=data['assistant_name'])
+    
+    # 模拟异步处理
+    import asyncio
+    await asyncio.sleep(1)  # 模拟异步操作
+    
+    return {
+        'status': 'success',
+        'message': 'Async processing completed',
+        'data': {
+            'response': 'This is an async response',
+            'content': {}
+        }
+    }

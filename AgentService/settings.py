@@ -65,6 +65,7 @@ MIDDLEWARE = [
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [],
     'DEFAULT_PERMISSION_CLASSES': [],
+    'UNAUTHENTICATED_USER': None,
 }
 
 ROOT_URLCONF = 'AgentService.urls'
@@ -94,8 +95,18 @@ WSGI_APPLICATION = 'AgentService.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.postgresql'),
+        'NAME': os.environ.get('DB_NAME', 'your_db_name'),
+        'USER': os.environ.get('DB_USER', 'your_db_user'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'your_db_password'),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
+        'CONN_MAX_AGE': 0,
+        'OPTIONS': {
+            'server_settings': {
+                'application_name': 'agent_service'
+            }
+        },
     }
 }
 
@@ -153,3 +164,53 @@ FORCE_SCRIPT_NAME = '/agent'
 # 确保这些设置也已启用
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
+
+# 添加 ASGI 应用程序配置
+ASGI_APPLICATION = 'AgentService.asgi.application'
+
+# 如果您暂时不想切换数据库，可以保留 SQLite 配置
+# 但需要注意，在异步视图中使用 ORM 操作时需要使用 sync_to_async
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
+# 添加 Django Channels 配置（如果需要 WebSocket 支持）
+# CHANNEL_LAYERS = {
+#     'default': {
+#         'BACKEND': 'channels_redis.core.RedisChannelLayer',
+#         'CONFIG': {
+#             'hosts': [('127.0.0.1', 6379)],
+#         },
+#     },
+# }
+
+# Redis 配置
+REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
+REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
+REDIS_DB = os.environ.get('REDIS_DB', '0')
+REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', '')
+
+# 缓存配置
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "PASSWORD": REDIS_PASSWORD,
+        }
+    }
+}
+
+# Channels 配置
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"],
+        },
+    },
+}

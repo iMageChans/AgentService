@@ -1,0 +1,21 @@
+# 异步支持
+django>=4.0
+uvicorn[standard]
+httpx
+asgiref>=3.4.0
+
+# 数据库驱动
+psycopg[binary]  # 用于 PostgreSQL
+# aiomysql  # 用于 MySQL
+
+# Redis 和 Channels 支持
+django-redis
+channels
+channels-redis
+
+# 其他依赖项
+djangorestframework
+drf-yasg
+django-filter
+django-cors-headers
+langchain 

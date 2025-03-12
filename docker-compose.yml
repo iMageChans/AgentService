@@ -20,4 +20,57 @@ services:
       - STATIC_URL=/agent/static/  # 注意这里使用了应用特定的路径
       - MEDIA_URL=/agent/static/
       - TIME_ZONE=Asia/Shanghai
-    command: ["python", "manage.py", "runserver", "0.0.0.0:8004"]
+      # PostgreSQL 数据库配置
+      - DB_ENGINE=django.db.backends.postgresql
+      - DB_NAME=your_db_name
+      - DB_USER=your_db_user
+      - DB_PASSWORD=your_db_password
+      - DB_HOST=postgres  # 使用 Docker 服务名称
+      - DB_PORT=5432
+      # Redis 配置
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - REDIS_PASSWORD=your_redis_password
+    # 使用 Uvicorn 运行 ASGI 应用
+    command: ["uvicorn", "AgentService.asgi:application", "--host", "0.0.0.0", "--port", "8004"]
+    depends_on:
+      - postgres
+      - redis
+
+  # 添加 PostgreSQL 服务
+  postgres:
+    image: postgres:14
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=your_db_name
+      - POSTGRES_USER=your_db_user
+      - POSTGRES_PASSWORD=your_db_password
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U your_db_user -d your_db_name"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 添加 Redis 服务
+  redis:
+    image: redis:7
+    restart: always
+    command: redis-server --requirepass your_redis_password
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "your_redis_password", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:

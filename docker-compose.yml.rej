@@ -1,0 +1,16 @@
+diff a/docker-compose.yml b/docker-compose.yml	(rejected hunks)
+@@ -6,12 +6,10 @@
+     restart: always
+     volumes:
+       - ./:/app
+-      - ./db.sqlite3:/app/db.sqlite3  # 直接映射本地数据库文件
++      # 如果使用 PostgreSQL，不需要映射 SQLite 数据库文件
++      # - ./db.sqlite3:/app/db.sqlite3  # 直接映射本地数据库文件
+       - ./staticfiles:/app/staticfiles  # 项目静态文件
+       - ./media:/app/media  # 媒体文件
+-      # 映射到宿主机的特定目录，方便nginx配置
+-      - /var/www/agent/static:/app/staticfiles
+-      - /var/www/agent/static:/app/media
+     ports:
+       - "8004:8004"
+     environment:
