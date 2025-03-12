@@ -54,6 +54,7 @@ class AgentViewSet(CreateModelMixin,
         users_input = validated_data.get("users_input")
         language = validated_data.get("language")
         user_template_id = validated_data.get("user_template_id", None)
+        is_premium = request.remote_user.get('is_premium')
 
         manager = initialize()
         manager.assistants[assistant_name].set_model(manager.models[model_name])
@@ -61,8 +62,11 @@ class AgentViewSet(CreateModelMixin,
         custom_prompt = None
         try:
             from assistant.models import UsersAssistantTemplates
-            if user_template_id:
-                user_template = UsersAssistantTemplates.objects.get(user_id=user_id, id=user_template_id)
+            if user_template_id and is_premium:
+                user_template = UsersAssistantTemplates.objects.get(user_id=user_id, id=user_template_id, is_premium_template=True)
+                custom_prompt = user_template.prompt_template
+            elif user_template_id and not is_premium:
+                user_template = UsersAssistantTemplates.objects.get(user_id=user_id, id=user_template_id, is_premium_template=False)
                 custom_prompt = user_template.prompt_template
             else:
                 user_template = UsersAssistantTemplates.objects.get(user_id=user_id, is_default=True)
