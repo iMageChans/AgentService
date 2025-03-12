@@ -92,8 +92,8 @@ class AssistantsConfigsSerializer(serializers.ModelSerializer):
 class UsersAssistantTemplatesSerializer(serializers.ModelSerializer):
     class Meta:
         model = UsersAssistantTemplates
-        fields = '__all__'
-        read_only_fields = ['prompt_template', 'created_at', 'updated_at']
+        fields = ['id', 'user_id', 'name', 'prompt_template', 'is_default', 'is_premium_template', 'created_at', 'updated_at']
+        read_only_fields = ['prompt_template', 'created_at', 'updated_at', 'is_premium_template']
 
 
 class GenerateTemplateSerializer(serializers.Serializer):

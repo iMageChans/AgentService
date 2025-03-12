@@ -56,6 +56,7 @@ class UsersAssistantTemplates(models.Model):
     user_id = models.IntegerField('用户ID', db_index=True, blank=True, null=True)
     name = models.CharField('助手模板名称', max_length=100)
     prompt_template = models.TextField('提示词', blank=True, null=True)
+    is_premium_template = models.BooleanField('是否付费模版', default=False)
     is_default = models.BooleanField('是否是默认模版', default=True)
     created_at = models.DateTimeField('创建时间', auto_now_add=True)
     updated_at = models.DateTimeField('更新时间', auto_now=True)

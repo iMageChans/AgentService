@@ -248,90 +248,93 @@ class UsersAssistantTemplatesViewSet(ListModelMixin,
 
     @swagger_auto_schema(
         operation_summary="生成用户助手模板",
-        operation_description="从助手模板和助手配置生成用户助手模板，如果用户已有模板，则更新现有模板",
+        operation_description="从助手模板和助手配置生成用户助手模板",
         request_body=GenerateTemplateSerializer
     )
     @action(detail=False, methods=['post'])
     def generate(self, request):
         """
         从助手模板和助手配置生成用户助手模板
-        如果用户已有模板，则更新现有模板
         """
         serializer = GenerateTemplateSerializer(data=request.data)
         if not serializer.is_valid():
-            return api_response(code=status.HTTP_400_BAD_REQUEST, msg=serializer.errors)
-        
-        # 获取验证后的数据
+            return api_response(
+                code=status.HTTP_400_BAD_REQUEST,
+                msg=serializer.errors
+            )
+
         template_id = serializer.validated_data.get('template_id')
         config_id = serializer.validated_data.get('config_id')
         name = serializer.validated_data.get('name')
-        user_id = request.remote_user.get('id')
-        is_premium = request.remote_user.get('is_premium', False)
-        
-        # 获取模板和配置
-        template = AssistantTemplates.objects.get(pk=template_id)
-        config = AssistantsConfigs.objects.get(pk=config_id)
-        
-        # 确保用户有权限访问此配置
-        if config.user_id != user_id:
-            return api_response(
-                code=status.HTTP_403_FORBIDDEN,
-                msg="您没有权限使用此助手配置"
+        is_default = serializer.validated_data.get('is_default', False)
+
+        try:
+            # 获取模板和配置
+            template = AssistantTemplates.objects.get(id=template_id)
+            config = AssistantsConfigs.objects.get(id=config_id)
+
+            # 检查是否包含付费字段
+            is_premium = False
+            
+            # 从常量中获取付费选项列表
+            from assistant.constants import (
+                PREMIUM_RELATIONSHIP_OPTIONS,
+                PREMIUM_NICKNAME_OPTIONS,
+                PREMIUM_PERSONALITY_OPTIONS
             )
-        
-        # 检查付费状态
-        if not is_premium:
-            # 检查关系字段
-            if config.relationship not in RELATIONSHIP_OPTIONS['free']:
-                return api_response(
-                    code=status.HTTP_403_FORBIDDEN,
-                    msg=f"关系选项 '{config.relationship}' 仅对付费用户开放"
-                )
             
-            # 检查昵称字段
-            if config.nickname not in NICKNAME_OPTIONS['free']:
-                return api_response(
-                    code=status.HTTP_403_FORBIDDEN,
-                    msg=f"昵称选项 '{config.nickname}' 仅对付费用户开放"
-                )
+            # 检查关系是否是付费选项
+            if config.relationship in PREMIUM_RELATIONSHIP_OPTIONS:
+                is_premium = True
+                
+            # 检查昵称是否是付费选项
+            if config.nickname in PREMIUM_NICKNAME_OPTIONS:
+                is_premium = True
+                
+            # 检查性格是否是付费选项
+            if config.personality in PREMIUM_PERSONALITY_OPTIONS:
+                is_premium = True
+
+            # 生成提示词
+            prompt = self.generate_prompt(template.prompt_template, config)
+
+            # 创建用户模板
+            user_id = request.remote_user.get('id')
             
-            # 检查性格字段
-            if config.personality not in PERSONALITY_OPTIONS['free']:
-                return api_response(
-                    code=status.HTTP_403_FORBIDDEN,
-                    msg=f"性格选项 '{config.personality}' 仅对付费用户开放"
-                )
-        
-        # 生成个性化提示词
-        prompt_template = self._generate_prompt_template(template.prompt_template, config)
-        
-        # 检查用户是否已有模板
-        user_template, created = UsersAssistantTemplates.objects.update_or_create(
-            user_id=user_id,
-            defaults={
-                'name': name,
-                'prompt_template': prompt_template,
-                'is_default': True  # 始终为默认，因为每个用户只有一个模板
-            }
-        )
-        
-        response_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
-        response_msg = "创建成功" if created else "更新成功"
-        
-        return api_response(
-            code=response_code,
-            msg=response_msg,
-            data={
-                "id": user_template.id,
-                "name": user_template.name,
-                "prompt_template": user_template.prompt_template,
-                "is_default": user_template.is_default,
-                "created_at": user_template.created_at,
-                "updated_at": user_template.updated_at
-            }
-        )
+            # 如果设置为默认，将其他模板设置为非默认
+            if is_default:
+                UsersAssistantTemplates.objects.filter(user_id=user_id).update(is_default=False)
+
+            # 创建新模板
+            user_template = UsersAssistantTemplates.objects.create(
+                user_id=user_id,
+                name=name,
+                prompt_template=prompt,
+                is_default=is_default,
+                is_premium_template=is_premium  # 设置是否为付费模板
+            )
+
+            return api_response(
+                code=status.HTTP_201_CREATED,
+                data=UsersAssistantTemplatesSerializer(user_template).data
+            )
+        except AssistantTemplates.DoesNotExist:
+            return api_response(
+                code=status.HTTP_404_NOT_FOUND,
+                msg="模板不存在"
+            )
+        except AssistantsConfigs.DoesNotExist:
+            return api_response(
+                code=status.HTTP_404_NOT_FOUND,
+                msg="配置不存在"
+            )
+        except Exception as e:
+            return api_response(
+                code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                msg=str(e)
+            )
     
-    def _generate_prompt_template(self, template, config):
+    def generate_prompt(self, template, config):
         """
         将配置信息嵌入到模板中
         """

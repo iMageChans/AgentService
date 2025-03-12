@@ -17,6 +17,33 @@ PERSONALITY_OPTIONS = {
                 'Fun & Humorous', 'Calm & Caring', 'Unique & Fantasy']
 }
 
+# 付费关系选项
+PREMIUM_RELATIONSHIP_OPTIONS = [
+    "BF", "GF", "BFF", "Muse", "Mystery", "Crush", 
+    "Money Guru", "Butler", "Boss", "Customization"
+]
+
+# 付费昵称选项
+PREMIUM_NICKNAME_OPTIONS = [
+    "Babe", "Angel", "Champ", "Sweetie", "Stranger", 
+    "Master", "Bestie", "Cutie", "Rookie", "Customization"
+]
+
+# 付费性格选项
+PREMIUM_PERSONALITY_OPTIONS = [
+    "Friendly & Warm", "Romantic & Flirty", "Professional & Smart", 
+    "Fun & Humorous", "Calm & Caring", "Unique & Fantasy", "Customization"
+]
+
+# 免费关系选项
+FREE_RELATIONSHIP_OPTIONS = ["Newbie", "Companion", "Buddy"]
+
+# 免费昵称选项
+FREE_NICKNAME_OPTIONS = ["Friend", "Mate", "Dude"]
+
+# 免费性格选项
+FREE_PERSONALITY_OPTIONS = ["Cheerful", "Cute"]
+
 # 判断是否是自定义值
 def is_custom_value(field, value):
     all_options = RELATIONSHIP_OPTIONS if field == 'relationship' else \
