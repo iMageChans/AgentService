@@ -26,12 +26,12 @@ schema_view = get_schema_view(
         title="AI 助手 API",
         default_version='v1',
         description="AI 助手服务 API 文档",
-        terms_of_service="https://www.yourapp.com/terms/",
+        terms_of_service="",
         contact=openapi.Contact(email="contact@yourapp.com"),
         license=openapi.License(name="BSD License"),
     ),
     public=True,
-    permission_classes=(permissions.IsAuthenticated,),
+    permission_classes=(permissions.AllowAny,),
 )
 
 urlpatterns = [
